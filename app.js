@@ -1,4 +1,14 @@
-// LifeFlow - Application Logic (State Management, Drag & Drop, LocalStorage)
+// LifeFlow - Application Logic (Firebase Auth & Cloud Firestore Integration)
+
+import { firebaseConfig } from './firebase-config.js';
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, addDoc, getDocs, onSnapshot, query, where, deleteDoc, updateDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+// --- INITIALIZE FIREBASE ---
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 // --- STATE MANAGEMENT ---
 const state = {
@@ -6,25 +16,39 @@ const state = {
     categories: [],
     currentMode: 'work', // 'work' | 'personal'
     themeMode: 'light',  // 'light' | 'dark'
-    currentFilter: 'all' // 'all' | categoryId
+    currentFilter: 'all', // 'all' | categoryId
+    currentUser: null,
+    categoriesInitialized: false
 };
+
+// Listeners unsubscribe references
+let unsubscribeTasks = null;
+let unsubscribeCategories = null;
 
 // --- DEFAULT CATEGORIES ---
 const DEFAULT_CATEGORIES = [
     // Work Mode Categories
-    { id: 'cat-w-prog', name: 'อาชีพโปรแกรมเมอร์', color: '#3b82f6', mode: 'work' },
-    { id: 'cat-w-free', name: 'งานฟรีแลนซ์', color: '#8b5cf6', mode: 'work' },
-    { id: 'cat-w-admin', name: 'งานประชุม/ธุรการ', color: '#f59e0b', mode: 'work' },
+    { name: 'อาชีพโปรแกรมเมอร์', color: '#3b82f6', mode: 'work' },
+    { name: 'งานฟรีแลนซ์', color: '#8b5cf6', mode: 'work' },
+    { name: 'งานประชุม/ธุรการ', color: '#f59e0b', mode: 'work' },
     
     // Personal Mode Categories
-    { id: 'cat-p-health', name: 'สุขภาพ & ออกกำลังกาย', color: '#10b981', mode: 'personal' },
-    { id: 'cat-p-finance', name: 'การเงิน & ช็อปปิ้ง', color: '#ef4444', mode: 'personal' },
-    { id: 'cat-p-hobby', name: 'งานอดิเรก & เที่ยว', color: '#ec4899', mode: 'personal' }
+    { name: 'สุขภาพ & ออกกำลังกาย', color: '#10b981', mode: 'personal' },
+    { name: 'การเงิน & ช็อปปิ้ง', color: '#ef4444', mode: 'personal' },
+    { name: 'งานอดิเรก & เที่ยว', color: '#ec4899', mode: 'personal' }
 ];
 
 // --- DOM ELEMENTS ---
 const DOM = {
     body: document.body,
+    authContainer: document.getElementById('auth-container'),
+    appContainer: document.getElementById('app-container'),
+    btnLoginGoogle: document.getElementById('btn-login-google'),
+    userProfile: document.getElementById('user-profile'),
+    userAvatar: document.getElementById('user-avatar'),
+    userName: document.getElementById('user-name'),
+    btnLogout: document.getElementById('btn-logout'),
+    
     btnModeWork: document.getElementById('btn-mode-work'),
     btnModePersonal: document.getElementById('btn-mode-personal'),
     btnThemeToggle: document.getElementById('btn-theme-toggle'),
@@ -70,32 +94,140 @@ const DOM = {
 
 // --- INITIALIZATION ---
 function init() {
-    loadFromLocalStorage();
+    setupAuthListener();
     setupEventListeners();
+    loadLocalSettings();
     applyTheme();
-    renderCategories();
-    renderTasks();
 }
 
-// --- LOCAL STORAGE FUNCTIONS ---
-function loadFromLocalStorage() {
-    const savedTasks = localStorage.getItem('lifeflow_tasks');
-    const savedCategories = localStorage.getItem('lifeflow_categories');
+// --- LOCAL STORAGE (SETTINGS ONLY) ---
+function loadLocalSettings() {
     const savedMode = localStorage.getItem('lifeflow_current_mode');
     const savedTheme = localStorage.getItem('lifeflow_theme');
     
-    state.tasks = savedTasks ? JSON.parse(savedTasks) : [];
-    state.categories = savedCategories ? JSON.parse(savedCategories) : [...DEFAULT_CATEGORIES];
     state.currentMode = savedMode ? savedMode : 'work';
     state.themeMode = savedTheme ? savedTheme : 'light';
     state.currentFilter = 'all';
 }
 
-function saveToLocalStorage() {
-    localStorage.setItem('lifeflow_tasks', JSON.stringify(state.tasks));
-    localStorage.setItem('lifeflow_categories', JSON.stringify(state.categories));
+function saveLocalSettings() {
     localStorage.setItem('lifeflow_current_mode', state.currentMode);
     localStorage.setItem('lifeflow_theme', state.themeMode);
+}
+
+// --- FIREBASE AUTHENTICATION ---
+function setupAuthListener() {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            state.currentUser = user;
+            state.categoriesInitialized = false;
+            
+            // Show app, hide login overlay
+            DOM.authContainer.style.display = 'none';
+            DOM.appContainer.style.display = 'flex';
+            
+            // Update User Profile Header UI
+            DOM.userAvatar.src = user.photoURL || 'https://www.gravatar.com/avatar/?d=mp';
+            DOM.userName.textContent = user.displayName || 'User';
+            DOM.userProfile.style.display = 'flex';
+            
+            // Setup real-time listeners for Firestore
+            setupFirestoreListeners(user.uid);
+        } else {
+            state.currentUser = null;
+            
+            // Unsubscribe existing listeners
+            if (unsubscribeTasks) unsubscribeTasks();
+            if (unsubscribeCategories) unsubscribeCategories();
+            
+            // Hide app, show login overlay
+            DOM.appContainer.style.display = 'none';
+            DOM.authContainer.style.display = 'flex';
+            DOM.userProfile.style.display = 'none';
+            
+            // Clear tasks/categories state
+            state.tasks = [];
+            state.categories = [];
+        }
+    });
+}
+
+async function loginWithGoogle() {
+    const provider = new GoogleAuthProvider();
+    try {
+        await signInWithPopup(auth, provider);
+    } catch (error) {
+        console.error("Authentication Error: ", error);
+        alert("ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง");
+    }
+}
+
+async function logout() {
+    try {
+        await signOut(auth);
+    } catch (error) {
+        console.error("Sign Out Error: ", error);
+    }
+}
+
+// --- FIRESTORE LISTENERS ---
+function setupFirestoreListeners(uid) {
+    // Unsubscribe existing if any
+    if (unsubscribeTasks) unsubscribeTasks();
+    if (unsubscribeCategories) unsubscribeCategories();
+    
+    // Query Categories
+    const qCat = query(collection(db, 'categories'), where('userId', '==', uid));
+    unsubscribeCategories = onSnapshot(qCat, async (snapshot) => {
+        const fetchedCategories = [];
+        snapshot.forEach(doc => {
+            fetchedCategories.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Seed Default Categories if empty
+        if (fetchedCategories.length === 0 && !state.categoriesInitialized) {
+            state.categoriesInitialized = true;
+            try {
+                const batch = writeBatch(db);
+                DEFAULT_CATEGORIES.forEach(cat => {
+                    const newId = 'cat-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                    batch.set(doc(db, 'categories', newId), {
+                        name: cat.name,
+                        color: cat.color,
+                        mode: cat.mode,
+                        userId: uid
+                    });
+                });
+                await batch.commit();
+            } catch (err) {
+                console.error("Error seeding default categories: ", err);
+            }
+            return;
+        }
+        
+        state.categories = fetchedCategories;
+        renderCategories();
+        renderTasks();
+    }, (error) => {
+        console.error("Categories Listener Error:", error);
+    });
+
+    // Query Tasks
+    const qTasks = query(collection(db, 'tasks'), where('userId', '==', uid));
+    unsubscribeTasks = onSnapshot(qTasks, (snapshot) => {
+        const fetchedTasks = [];
+        snapshot.forEach(doc => {
+            fetchedTasks.push({ id: doc.id, ...doc.data() });
+        });
+        
+        // Sort tasks by 'order' index
+        fetchedTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        
+        state.tasks = fetchedTasks;
+        renderTasks();
+    }, (error) => {
+        console.error("Tasks Listener Error:", error);
+    });
 }
 
 // --- THEME & MODE MANAGEMENT ---
@@ -129,7 +261,7 @@ function toggleMode(mode) {
     if (state.currentMode === mode) return;
     state.currentMode = mode;
     state.currentFilter = 'all'; // Reset filter on mode change
-    saveToLocalStorage();
+    saveLocalSettings();
     applyTheme();
     renderCategories();
     renderTasks();
@@ -137,13 +269,13 @@ function toggleMode(mode) {
 
 function toggleTheme() {
     state.themeMode = state.themeMode === 'light' ? 'dark' : 'light';
-    saveToLocalStorage();
+    saveLocalSettings();
     applyTheme();
 }
 
 // --- RENDER FUNCTIONS ---
 function renderCategories() {
-    // Filter categories by current mode (work / personal)
+    // Filter categories by current mode
     const modeCategories = state.categories.filter(cat => cat.mode === state.currentMode);
     
     // Update Filter dropdown
@@ -293,7 +425,6 @@ function createTaskCard(task) {
 function updateCounters() {
     const statuses = ['todo', 'progress', 'done'];
     statuses.forEach(status => {
-        // Count filtered tasks in each column
         let count = state.tasks.filter(task => task.mode === state.currentMode && task.status === status);
         if (state.currentFilter !== 'all') {
             count = count.filter(task => task.categoryId === state.currentFilter);
@@ -316,13 +447,11 @@ function handleDragEnd() {
     this.classList.remove('dragging');
     draggedTaskId = null;
     
-    // Remove dragover highlights from all columns
     Object.values(DOM.columns).forEach(col => {
         col.classList.remove('drag-over');
     });
 }
 
-// Setup Column drag events
 function setupDragContainers() {
     Object.keys(DOM.columns).forEach(status => {
         const container = DOM.columns[status];
@@ -358,7 +487,6 @@ function setupDragContainers() {
     });
 }
 
-// Helper to determine dropping position relative to elements
 function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
     
@@ -374,19 +502,18 @@ function getDragAfterElement(container, y) {
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-function saveTaskOrder() {
-    const newOrderedTasks = [];
+async function saveTaskOrder() {
+    if (!state.currentUser) return;
+    
     const statuses = ['todo', 'progress', 'done'];
     const visibleOrderedIds = [];
     
-    // Get current order from DOM
+    // Get visible columns order from DOM
     statuses.forEach(status => {
         const container = DOM.columns[status];
         const cards = container.querySelectorAll('.task-card');
         cards.forEach(card => {
             visibleOrderedIds.push(card.dataset.id);
-            
-            // Update status of this task directly in state tasks list
             const task = state.tasks.find(t => t.id === card.dataset.id);
             if (task) {
                 task.status = status;
@@ -394,15 +521,13 @@ function saveTaskOrder() {
         });
     });
     
-    // Reorder state.tasks to match DOM sequence for filtered items,
-    // keeping unfiltered items in their position.
-    const unfilteredTasks = state.tasks.filter(task => {
+    // Separate visible and invisible tasks
+    const invisibleTasks = state.tasks.filter(task => {
         const isVisible = (task.mode === state.currentMode) && 
                           (state.currentFilter === 'all' || task.categoryId === state.currentFilter);
         return !isVisible;
     });
     
-    // Visible tasks sorted by order in DOM
     const visibleTasks = [];
     visibleOrderedIds.forEach(id => {
         const task = state.tasks.find(t => t.id === id);
@@ -411,9 +536,22 @@ function saveTaskOrder() {
         }
     });
     
-    state.tasks = [...unfilteredTasks, ...visibleTasks];
-    saveToLocalStorage();
-    renderTasks(); // Re-render to clear empty states / update counters correctly
+    const combined = [...invisibleTasks, ...visibleTasks];
+    
+    // Batch update order and status to Firestore
+    try {
+        const batch = writeBatch(db);
+        combined.forEach((task, index) => {
+            const taskRef = doc(db, 'tasks', task.id);
+            batch.update(taskRef, {
+                order: index,
+                status: task.status
+            });
+        });
+        await batch.commit();
+    } catch (error) {
+        console.error("Error committing drag and drop order to Firestore:", error);
+    }
 }
 
 // --- TASK CRUD ACTIONS ---
@@ -422,9 +560,7 @@ window.openAddTaskModal = function() {
     DOM.taskIdInput.value = '';
     DOM.taskModalTitle.textContent = 'สร้างงานค้างคาใหม่';
     
-    // Load categories for active mode
     renderCategories();
-    
     DOM.modalTask.classList.add('open');
 };
 
@@ -436,7 +572,7 @@ window.openEditTaskModal = function(id) {
     DOM.taskTitleInput.value = task.title;
     DOM.taskDescInput.value = task.desc || '';
     
-    renderCategories(); // Make sure dropdown matches current mode
+    renderCategories();
     DOM.taskCategorySelect.value = task.categoryId || '';
     DOM.taskPrioritySelect.value = task.priority;
     DOM.taskDateInput.value = task.date || '';
@@ -449,8 +585,9 @@ function closeTaskModal() {
     DOM.modalTask.classList.remove('open');
 }
 
-function handleTaskFormSubmit(e) {
+async function handleTaskFormSubmit(e) {
     e.preventDefault();
+    if (!state.currentUser) return;
     
     const id = DOM.taskIdInput.value;
     const title = DOM.taskTitleInput.value.trim();
@@ -461,51 +598,57 @@ function handleTaskFormSubmit(e) {
     
     if (!title) return;
     
-    if (id) {
-        // Edit Mode
-        const taskIndex = state.tasks.findIndex(t => t.id === id);
-        if (taskIndex !== -1) {
-            state.tasks[taskIndex] = {
-                ...state.tasks[taskIndex],
+    try {
+        if (id) {
+            // Edit Mode: Update Firestore Doc
+            const taskRef = doc(db, 'tasks', id);
+            await updateDoc(taskRef, {
                 title,
                 desc,
                 categoryId,
                 priority,
                 date
-            };
+            });
+        } else {
+            // Create Mode: Add Firestore Doc
+            const newId = 'task-' + Date.now() + Math.random().toString(36).substr(2, 5);
+            // Put it at the end of the order
+            const orderIndex = state.tasks.length;
+            await setDoc(doc(db, 'tasks', newId), {
+                title,
+                desc,
+                categoryId,
+                priority,
+                date,
+                status: 'todo',
+                mode: state.currentMode,
+                userId: state.currentUser.uid,
+                order: orderIndex
+            });
         }
-    } else {
-        // Create Mode
-        const newTask = {
-            id: 'task-' + Date.now(),
-            title,
-            desc,
-            categoryId,
-            priority,
-            date,
-            status: 'todo',
-            mode: state.currentMode
-        };
-        state.tasks.push(newTask);
+        closeTaskModal();
+    } catch (error) {
+        console.error("Error saving task to Firestore:", error);
+        alert("ไม่สามารถบันทึกงานได้ในขณะนี้");
     }
-    
-    saveToLocalStorage();
-    closeTaskModal();
-    renderTasks();
 }
 
-window.deleteTask = function(id) {
-    // Elegant confirmation transition
+window.deleteTask = async function(id) {
+    if (!state.currentUser) return;
+    
     const card = document.querySelector(`.task-card[data-id="${id}"]`);
     if (card) {
         card.style.transform = 'scale(0.8)';
         card.style.opacity = '0';
         card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 1, 1)';
         
-        setTimeout(() => {
-            state.tasks = state.tasks.filter(t => t.id !== id);
-            saveToLocalStorage();
-            renderTasks();
+        setTimeout(async () => {
+            try {
+                await deleteDoc(doc(db, 'tasks', id));
+            } catch (error) {
+                console.error("Error deleting task in Firestore:", error);
+                alert("ไม่สามารถลบงานได้ในขณะนี้");
+            }
         }, 300);
     }
 };
@@ -522,48 +665,60 @@ function closeCategoryModal() {
     DOM.modalCategory.classList.remove('open');
 }
 
-function handleAddCategorySubmit(e) {
+async function handleAddCategorySubmit(e) {
     e.preventDefault();
+    if (!state.currentUser) return;
+    
     const name = DOM.categoryNameInput.value.trim();
     const color = DOM.categoryColorInput.value;
     
     if (!name) return;
     
-    const newCategory = {
-        id: 'cat-' + Date.now(),
-        name,
-        color,
-        mode: state.currentMode
-    };
-    
-    state.categories.push(newCategory);
-    saveToLocalStorage();
-    renderCategories();
-    renderTasks(); // Re-render task labels
-    
-    DOM.formAddCategory.reset();
-    DOM.categoryColorInput.value = getRandomColor();
+    try {
+        const newId = 'cat-' + Date.now() + Math.random().toString(36).substr(2, 5);
+        await setDoc(doc(db, 'categories', newId), {
+            name,
+            color,
+            mode: state.currentMode,
+            userId: state.currentUser.uid
+        });
+        
+        DOM.formAddCategory.reset();
+        DOM.categoryColorInput.value = getRandomColor();
+    } catch (error) {
+        console.error("Error adding category to Firestore:", error);
+        alert("ไม่สามารถเพิ่มหมวดหมู่ได้ในขณะนี้");
+    }
 }
 
-window.deleteCategory = function(id) {
-    // Delete category
-    state.categories = state.categories.filter(cat => cat.id !== id);
+window.deleteCategory = async function(id) {
+    if (!state.currentUser) return;
     
-    // Unlink from all tasks that use this category
-    state.tasks = state.tasks.map(task => {
-        if (task.categoryId === id) {
-            return { ...task, categoryId: '' };
-        }
-        return task;
-    });
-    
-    saveToLocalStorage();
-    renderCategories();
-    renderTasks();
+    try {
+        const batch = writeBatch(db);
+        
+        // Unlink this category from all tasks
+        const tasksToUpdate = state.tasks.filter(task => task.categoryId === id);
+        tasksToUpdate.forEach(task => {
+            batch.update(doc(db, 'tasks', task.id), { categoryId: '' });
+        });
+        
+        // Delete category doc
+        batch.delete(doc(db, 'categories', id));
+        
+        await batch.commit();
+    } catch (error) {
+        console.error("Error deleting category in Firestore:", error);
+        alert("ไม่สามารถลบหมวดหมู่ได้ในขณะนี้");
+    }
 }
 
 // --- HELPERS ---
 function setupEventListeners() {
+    // Auth actions
+    DOM.btnLoginGoogle.addEventListener('click', loginWithGoogle);
+    DOM.btnLogout.addEventListener('click', logout);
+    
     // Mode triggers
     DOM.btnModeWork.addEventListener('click', () => toggleMode('work'));
     DOM.btnModePersonal.addEventListener('click', () => toggleMode('personal'));
@@ -605,6 +760,7 @@ function getRandomColor() {
 }
 
 function escapeHtml(unsafe) {
+    if (!unsafe) return '';
     return unsafe
          .replace(/&/g, "&amp;")
          .replace(/</g, "&lt;")

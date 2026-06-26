@@ -19,7 +19,30 @@
     <div class="ambient-blob blob-2"></div>
     <div class="ambient-blob blob-3"></div>
 
-    <div class="app-container">
+    <!-- Authentication Fullscreen Page -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <div class="logo-icon big-logo">
+                    <i class="fa-solid fa-wind"></i>
+                </div>
+                <h2>LifeFlow</h2>
+                <p class="subtitle">จัดระเบียบเวลา คืนความสมดุลให้ชีวิต</p>
+            </div>
+            
+            <div class="auth-divider"></div>
+            
+            <div class="auth-body">
+                <h3>เข้าสู่ระบบเพื่อใช้งาน</h3>
+                <p class="auth-desc">ข้อมูลสิ่งที่ต้องทำและหมวดหมู่ต่างๆ ของคุณจะซิงค์ผ่านคลาวด์อัตโนมัติ ทำให้คุณใช้งานร่วมกันได้ทั้งในคอมและมือถือ แยกบัญชีส่วนบุคคลอย่างปลอดภัย 100%</p>
+                <button class="btn btn-primary btn-login-google" id="btn-login-google">
+                    <i class="fa-brands fa-google"></i> เข้าสู่ระบบด้วย Google
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="app-container" style="display: none;">
         <!-- Sidebar or Header Panel -->
         <header class="app-header">
             <div class="brand-section">
@@ -47,6 +70,15 @@
 
             <!-- Quick Controls -->
             <div class="controls-section">
+                <!-- User Profile Info -->
+                <div class="user-profile" id="user-profile" style="display: none;">
+                    <img src="" alt="Avatar" id="user-avatar" class="user-avatar">
+                    <span id="user-name" class="user-name"></span>
+                    <button class="icon-btn" id="btn-logout" title="ออกจากระบบ">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                    </button>
+                </div>
+                
                 <!-- Theme Mode (Light/Dark) -->
                 <button class="icon-btn" id="btn-theme-toggle" title="สลับโหมด มืด/สว่าง">
                     <i class="fa-solid fa-moon"></i>
@@ -212,6 +244,6 @@
     </div>
 
     <!-- Application Logic -->
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
