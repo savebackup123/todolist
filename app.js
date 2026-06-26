@@ -17,6 +17,7 @@ const state = {
     currentMode: 'work', // 'work' | 'personal'
     themeMode: 'light',  // 'light' | 'dark'
     currentFilter: 'all', // 'all' | categoryId
+    sortMode: 'custom',  // 'custom' | 'date-asc' | 'priority-desc'
     currentUser: null,
     categoriesInitialized: false
 };
@@ -55,6 +56,7 @@ const DOM = {
     btnAddTask: document.getElementById('btn-add-task'),
     btnManageCategories: document.getElementById('btn-manage-categories'),
     filterCategory: document.getElementById('filter-category'),
+    sortTasksSelect: document.getElementById('sort-tasks'),
     
     // Columns & Counters
     columns: {
@@ -104,15 +106,22 @@ function init() {
 function loadLocalSettings() {
     const savedMode = localStorage.getItem('lifeflow_current_mode');
     const savedTheme = localStorage.getItem('lifeflow_theme');
+    const savedSort = localStorage.getItem('lifeflow_sort_mode');
     
     state.currentMode = savedMode ? savedMode : 'work';
     state.themeMode = savedTheme ? savedTheme : 'light';
+    state.sortMode = savedSort ? savedSort : 'custom';
     state.currentFilter = 'all';
+    
+    if (DOM.sortTasksSelect) {
+        DOM.sortTasksSelect.value = state.sortMode;
+    }
 }
 
 function saveLocalSettings() {
     localStorage.setItem('lifeflow_current_mode', state.currentMode);
     localStorage.setItem('lifeflow_theme', state.themeMode);
+    localStorage.setItem('lifeflow_sort_mode', state.sortMode);
 }
 
 // --- FIREBASE AUTHENTICATION ---
@@ -371,6 +380,23 @@ function renderTasks() {
         filteredTasks = filteredTasks.filter(task => task.categoryId === state.currentFilter);
     }
     
+    // Sort tasks based on selected sorting mode
+    if (state.sortMode === 'date-asc') {
+        filteredTasks.sort((a, b) => {
+            if (!a.date) return 1; // Put tasks without due dates at the bottom
+            if (!b.date) return -1;
+            return a.date.localeCompare(b.date);
+        });
+    } else if (state.sortMode === 'priority-desc') {
+        const priorityWeight = { high: 3, medium: 2, low: 1 };
+        filteredTasks.sort((a, b) => {
+            return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+        });
+    } else {
+        // Default: Sort by custom drag and drop index
+        filteredTasks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    }
+    
     // Group and render tasks into columns
     const columnsData = { todo: [], progress: [], done: [] };
     filteredTasks.forEach(task => {
@@ -400,6 +426,8 @@ function renderTasks() {
     });
     
     updateCounters();
+    updateDashboardAlert();
+}
 }
 
 function createTaskCard(task) {
@@ -414,17 +442,17 @@ function createTaskCard(task) {
         ? `<span class="task-tag" style="background-color: ${category.color + '15'}; color: ${category.color}; border-color: ${category.color + '30'};" title="${category.name}">${category.name}</span>`
         : '';
         
-    // Date formatting & overdue check
+    // Date formatting & relative indicators
     let dateHtml = '';
     if (task.date) {
-        const today = new Date().toISOString().split('T')[0];
-        const isOverdue = task.date < today && task.status !== 'done';
-        const dateObj = new Date(task.date);
-        const formattedDate = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
-        
+        const { text, className } = getRelativeDateLabel(task.date, task.status);
+        const iconClass = className === 'overdue' 
+            ? 'fa-circle-exclamation' 
+            : (className === 'due-today' ? 'fa-fire' : 'fa-calendar');
+            
         dateHtml = `
-            <span class="task-date ${isOverdue ? 'overdue' : ''}">
-                <i class="fa-regular ${isOverdue ? 'fa-circle-exclamation' : 'fa-calendar'}"></i> ${formattedDate}
+            <span class="task-date-badge ${className}">
+                <i class="fa-solid ${iconClass}"></i> ${text}
             </span>
         `;
     }
@@ -537,6 +565,25 @@ function getDragAfterElement(container, y) {
 
 async function saveTaskOrder() {
     if (!state.currentUser) return;
+    
+    // If sorting by due date or priority, dragging only changes column status, not ordering indexes
+    if (state.sortMode !== 'custom') {
+        if (draggedTaskId) {
+            const card = document.querySelector(`.task-card[data-id="${draggedTaskId}"]`);
+            if (card) {
+                const newStatus = card.closest('.kanban-column').dataset.status;
+                const task = state.tasks.find(t => t.id === draggedTaskId);
+                if (task && task.status !== newStatus) {
+                    try {
+                        await updateDoc(doc(db, 'tasks', draggedTaskId), { status: newStatus });
+                    } catch (error) {
+                        console.error("Error updating dropped task status:", error);
+                    }
+                }
+            }
+        }
+        return;
+    }
     
     const statuses = ['todo', 'progress', 'done'];
     const visibleOrderedIds = [];
@@ -778,6 +825,21 @@ function setupEventListeners() {
         renderTasks();
     });
     
+    // Sort dropdown changer
+    DOM.sortTasksSelect.addEventListener('change', (e) => {
+        state.sortMode = e.target.value;
+        saveLocalSettings();
+        renderTasks();
+    });
+    
+    // Dashboard Alert banner close button
+    const closeAlertBtn = document.getElementById('btn-close-alert');
+    if (closeAlertBtn) {
+        closeAlertBtn.addEventListener('click', () => {
+            document.getElementById('dashboard-alert').style.display = 'none';
+        });
+    }
+    
     // Close modals on clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === DOM.modalTask) closeTaskModal();
@@ -790,6 +852,107 @@ function setupEventListeners() {
 function getRandomColor() {
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#14b8a6'];
     return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function getRelativeDateLabel(dueDateStr, status) {
+    if (!dueDateStr) return { text: '', className: '' };
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    if (status === 'done') {
+        const dateObj = new Date(dueDateStr);
+        const formattedDate = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        return { text: formattedDate, className: 'normal' };
+    }
+    
+    const today = new Date(todayStr);
+    const due = new Date(dueDateStr);
+    const diffTime = due - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    const dateObj = new Date(dueDateStr);
+    const formattedDate = dateObj.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+    
+    if (diffDays < 0) {
+        const absDays = Math.abs(diffDays);
+        return { 
+            text: `เลยกำหนด ${absDays} วัน (${formattedDate})`, 
+            className: 'overdue' 
+        };
+    } else if (diffDays === 0) {
+        return { 
+            text: `ครบกำหนดวันนี้`, 
+            className: 'due-today' 
+        };
+    } else if (diffDays === 1) {
+        return { 
+            text: `ครบกำหนดพรุ่งนี้`, 
+            className: 'due-tomorrow' 
+        };
+    } else if (diffDays <= 7) {
+        return { 
+            text: `เหลืออีก ${diffDays} วัน`, 
+            className: 'normal' 
+        };
+    } else {
+        return { 
+            text: formattedDate, 
+            className: 'normal' 
+        };
+    }
+}
+
+function updateDashboardAlert() {
+    const alertContainer = document.getElementById('dashboard-alert');
+    const alertText = document.getElementById('dashboard-alert-text');
+    
+    if (!alertContainer || !alertText || !state.currentUser) {
+        if (alertContainer) alertContainer.style.display = 'none';
+        return;
+    }
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    // Filter active tasks of the current life mode that are not done
+    const activeTasks = state.tasks.filter(t => t.mode === state.currentMode && t.status !== 'done');
+    
+    let overdueCount = 0;
+    let dueTodayCount = 0;
+    
+    activeTasks.forEach(task => {
+        if (task.date) {
+            if (task.date < todayStr) {
+                overdueCount++;
+            } else if (task.date === todayStr) {
+                dueTodayCount++;
+            }
+        }
+    });
+    
+    const displayName = state.currentUser.displayName ? state.currentUser.displayName.split(' ')[0] : 'คุณ';
+    const modeLabel = state.currentMode === 'work' ? 'เรื่องงาน' : 'ส่วนตัว';
+    
+    if (overdueCount === 0 && dueTodayCount === 0) {
+        // No urgent tasks
+        alertText.innerHTML = `สวัสดีครับ <strong>คุณ ${displayName}</strong> วันนี้ไม่มีงาน${modeLabel}ค้างที่เร่งด่วนครับ ขอให้เป็นวันเริ่มต้นที่ดีนะ!`;
+        alertContainer.style.display = 'flex';
+        alertContainer.querySelector('.alert-icon').innerHTML = '<i class="fa-solid fa-mug-hot" style="color: var(--theme-primary);"></i>';
+    } else {
+        // Has overdue or due today tasks
+        let msg = `สวัสดีครับ <strong>คุณ ${displayName}</strong> ในโหมด${modeLabel} `;
+        
+        if (overdueCount > 0 && dueTodayCount > 0) {
+            msg += `คุณมีงาน <span class="overdue-count">เลยกำหนดส่ง ${overdueCount} งาน</span> และมีงาน <strong style="color: var(--color-warning);">ต้องส่งวันนี้อีก ${dueTodayCount} งาน</strong> ครับ สู้ๆ นะครับ!`;
+        } else if (overdueCount > 0) {
+            msg += `คุณมีงาน <span class="overdue-count">เลยกำหนดส่งค้างอยู่ ${overdueCount} งาน</span> นะครับ อย่าลืมเคลียร์ล่ะ!`;
+        } else {
+            msg += `วันนี้คุณมีงาน <strong style="color: var(--color-warning);">ต้องส่งภายในวันนี้ ${dueTodayCount} งาน</strong> นะครับ ขอให้ราบรื่นครับ!`;
+        }
+        
+        alertText.innerHTML = msg;
+        alertContainer.style.display = 'flex';
+        alertContainer.querySelector('.alert-icon').innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: var(--color-danger);"></i>';
+    }
 }
 
 function escapeHtml(unsafe) {

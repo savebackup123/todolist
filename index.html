@@ -90,6 +90,17 @@
             </div>
         </header>
 
+        <!-- Dashboard Summary Alert -->
+        <div class="dashboard-alert" id="dashboard-alert" style="display: none;">
+            <div class="alert-icon">
+                <i class="fa-solid fa-circle-exclamation"></i>
+            </div>
+            <div class="alert-content">
+                <p id="dashboard-alert-text">สวัสดีครับ ยินดีต้อนรับสู่ LifeFlow!</p>
+            </div>
+            <button class="alert-close-btn" id="btn-close-alert" title="ปิดการแจ้งเตือน">&times;</button>
+        </div>
+
         <!-- Sub-navigation & Filtering -->
         <section class="sub-header">
             <div class="filter-group">
@@ -99,6 +110,17 @@
                 <div class="select-wrapper">
                     <select id="filter-category">
                         <option value="all">ทุกงาน / ทุกอาชีพ</option>
+                    </select>
+                </div>
+
+                <label for="sort-tasks" class="filter-label" style="margin-left: 1.5rem;">
+                    <i class="fa-solid fa-arrow-down-wide-short"></i> เรียงตาม:
+                </label>
+                <div class="select-wrapper">
+                    <select id="sort-tasks">
+                        <option value="custom">กำหนดเอง (ลากวาง)</option>
+                        <option value="date-asc">วันส่งงาน (ด่วนที่สุดก่อน)</option>
+                        <option value="priority-desc">ความสำคัญ (สูง -> ต่ำ)</option>
                     </select>
                 </div>
             </div>
