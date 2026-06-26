@@ -849,29 +849,24 @@ function setupEventListeners() {
         renderTasks();
     });
     
-    // Mobile tab buttons click triggers
-    const mobileTabs = document.querySelectorAll('.mobile-tab-btn');
-    mobileTabs.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Remove active class from all tabs
-            mobileTabs.forEach(t => t.classList.remove('active'));
-            // Add active class to clicked tab
-            btn.classList.add('active');
-            
-            // Get target column ID
-            const targetColId = btn.dataset.target;
-            
-            // Toggle active-tab class on all columns
-            const columns = document.querySelectorAll('.kanban-column');
-            columns.forEach(col => {
-                if (col.id === targetColId) {
-                    col.classList.add('active-tab');
-                } else {
-                    col.classList.remove('active-tab');
-                }
-            });
+    // Global function for switching mobile tabs
+    window.switchMobileTab = function(targetColId, btnElement) {
+        // Remove active class from all tabs
+        const mobileTabs = document.querySelectorAll('.mobile-tab-btn');
+        mobileTabs.forEach(t => t.classList.remove('active'));
+        // Add active class to clicked tab
+        btnElement.classList.add('active');
+        
+        // Toggle active-tab class on all columns
+        const columns = document.querySelectorAll('.kanban-column');
+        columns.forEach(col => {
+            if (col.id === targetColId) {
+                col.classList.add('active-tab');
+            } else {
+                col.classList.remove('active-tab');
+            }
         });
-    });
+    };
     
     // Dashboard Alert banner close button
     const closeAlertBtn = document.getElementById('btn-close-alert');

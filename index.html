@@ -11,7 +11,7 @@
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- CSS Style -->
-    <link rel="stylesheet" href="style.css?v=1.0.2">
+    <link rel="stylesheet" href="style.css?v=1.0.3">
 </head>
 <body class="theme-work">
     <!-- Decorative Ambient Blobs -->
@@ -134,13 +134,13 @@
 
         <!-- Mobile Column Tabs Navigation -->
         <div class="mobile-board-tabs" id="mobile-board-tabs">
-            <button class="mobile-tab-btn active" data-target="col-todo">
+            <button class="mobile-tab-btn active" onclick="switchMobileTab('col-todo', this)">
                 <span class="column-dot dot-todo"></span> ต้องทำ (<span id="tab-count-todo">0</span>)
             </button>
-            <button class="mobile-tab-btn" data-target="col-progress">
+            <button class="mobile-tab-btn" onclick="switchMobileTab('col-progress', this)">
                 <span class="column-dot dot-progress"></span> กำลังทำ (<span id="tab-count-progress">0</span>)
             </button>
-            <button class="mobile-tab-btn" data-target="col-done">
+            <button class="mobile-tab-btn" onclick="switchMobileTab('col-done', this)">
                 <span class="column-dot dot-done"></span> เสร็จแล้ว (<span id="tab-count-done">0</span>)
             </button>
         </div>
@@ -289,6 +289,6 @@
     </div>
 
     <!-- Application Logic -->
-    <script type="module" src="app.js?v=1.0.2"></script>
+    <script type="module" src="app.js?v=1.0.3"></script>
 </body>
 </html>
