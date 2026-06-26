@@ -55,6 +55,7 @@ body.theme-work {
     --shadow-soft: 0 10px 30px -10px rgba(148, 163, 184, 0.3);
     --shadow-inset: inset 0 2px 4px 0 rgba(255, 255, 255, 0.8);
     --shadow-card: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+    --bg-dropdown-option: #ffffff;
 }
 
 /* Theme: Light Mode (Personal) */
@@ -81,6 +82,7 @@ body.theme-personal {
     --shadow-soft: 0 10px 30px -10px rgba(140, 114, 108, 0.25);
     --shadow-inset: inset 0 2px 4px 0 rgba(255, 255, 255, 0.8);
     --shadow-card: 0 8px 32px 0 rgba(135, 31, 74, 0.03);
+    --bg-dropdown-option: #ffffff;
 }
 
 /* Theme: Dark Mode (Work) */
@@ -107,6 +109,7 @@ body.dark-mode.theme-work {
     --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
     --shadow-inset: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
     --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --bg-dropdown-option: #1e293b;
 }
 
 /* Theme: Dark Mode (Personal) */
@@ -133,6 +136,7 @@ body.dark-mode.theme-personal {
     --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.6);
     --shadow-inset: inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
     --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --bg-dropdown-option: #241c1a;
 }
 
 /* --- BASIC RESET & LAYOUT --- */
@@ -488,15 +492,28 @@ body.dark-mode .icon-btn:hover {
     transition: all var(--transition-fast);
 }
 
-#filter-category:hover, #task-category:hover, #task-priority:hover {
+#filter-category:hover, #task-category:hover, #task-priority:hover,
+#filter-category:focus, #task-category:focus, #task-priority:focus {
     border-color: var(--theme-primary);
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
 }
 
 body.dark-mode #filter-category:hover, 
 body.dark-mode #task-category:hover, 
-body.dark-mode #task-priority:hover {
-    background: rgba(255, 255, 255, 0.1);
+body.dark-mode #task-priority:hover,
+body.dark-mode #filter-category:focus, 
+body.dark-mode #task-category:focus, 
+body.dark-mode #task-priority:focus {
+    background: var(--bg-dropdown-option);
+}
+
+/* Explicit style for option list to prevent white text on white bg / inheritance flickering */
+#filter-category option, 
+#task-category option, 
+#task-priority option {
+    background-color: var(--bg-dropdown-option);
+    color: var(--text-primary);
+    padding: 0.5rem;
 }
 
 /* --- KANBAN BOARD LAYOUT --- */
