@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeFlow - จัดระเบียบชีวิตและการทำงาน</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Style -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-work">
+    <!-- Decorative Ambient Blobs -->
+    <div class="ambient-blob blob-1"></div>
+    <div class="ambient-blob blob-2"></div>
+    <div class="ambient-blob blob-3"></div>
+
+    <div class="app-container">
+        <!-- Sidebar or Header Panel -->
+        <header class="app-header">
+            <div class="brand-section">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-wind"></i>
+                </div>
+                <div class="brand-details">
+                    <h1>LifeFlow</h1>
+                    <p class="subtitle">จัดระเบียบเวลา คืนความสมดุลให้ชีวิต</p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher -->
+            <div class="mode-toggle-container">
+                <div class="mode-toggle-track">
+                    <button class="mode-btn active" id="btn-mode-work" data-mode="work">
+                        <i class="fa-solid fa-briefcase"></i> โหมดทำงาน
+                    </button>
+                    <button class="mode-btn" id="btn-mode-personal" data-mode="personal">
+                        <i class="fa-solid fa-heart"></i> โหมดส่วนตัว
+                    </button>
+                    <div class="mode-slider"></div>
+                </div>
+            </div>
+
+            <!-- Quick Controls -->
+            <div class="controls-section">
+                <!-- Theme Mode (Light/Dark) -->
+                <button class="icon-btn" id="btn-theme-toggle" title="สลับโหมด มืด/สว่าง">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+                <!-- Add Task Button -->
+                <button class="btn btn-primary" id="btn-add-task">
+                    <i class="fa-solid fa-plus"></i> เพิ่มงานใหม่
+                </button>
+            </div>
+        </header>
+
+        <!-- Sub-navigation & Filtering -->
+        <section class="sub-header">
+            <div class="filter-group">
+                <label for="filter-category" class="filter-label">
+                    <i class="fa-solid fa-sliders"></i> ตัวกรอง:
+                </label>
+                <div class="select-wrapper">
+                    <select id="filter-category">
+                        <option value="all">ทุกงาน / ทุกอาชีพ</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="action-group">
+                <button class="btn btn-secondary" id="btn-manage-categories">
+                    <i class="fa-solid fa-tags"></i> จัดการหมวดหมู่/อาชีพ
+                </button>
+            </div>
+        </section>
+
+        <!-- Kanban Board Area -->
+        <main class="kanban-board">
+            <!-- Column: TO DO -->
+            <div class="kanban-column" id="col-todo" data-status="todo">
+                <div class="column-header">
+                    <div class="column-title-wrapper">
+                        <span class="column-dot dot-todo"></span>
+                        <h2>ต้องทำ</h2>
+                    </div>
+                    <span class="task-count" id="count-todo">0</span>
+                </div>
+                <div class="column-body drag-container" id="tasks-todo">
+                    <!-- Tasks will be injected here dynamically -->
+                </div>
+            </div>
+
+            <!-- Column: IN PROGRESS -->
+            <div class="kanban-column" id="col-progress" data-status="progress">
+                <div class="column-header">
+                    <div class="column-title-wrapper">
+                        <span class="column-dot dot-progress"></span>
+                        <h2>กำลังทำ</h2>
+                    </div>
+                    <span class="task-count" id="count-progress">0</span>
+                </div>
+                <div class="column-body drag-container" id="tasks-progress">
+                    <!-- Tasks will be injected here dynamically -->
+                </div>
+            </div>
+
+            <!-- Column: DONE -->
+            <div class="kanban-column" id="col-done" data-status="done">
+                <div class="column-header">
+                    <div class="column-title-wrapper">
+                        <span class="column-dot dot-done"></span>
+                        <h2>เสร็จแล้ว</h2>
+                    </div>
+                    <span class="task-count" id="count-done">0</span>
+                </div>
+                <div class="column-body drag-container" id="tasks-done">
+                    <!-- Tasks will be injected here dynamically -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Add/Edit Task -->
+    <div class="modal-backdrop" id="modal-task">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="task-modal-title">สร้างงานค้างคาใหม่</h3>
+                <button class="close-btn" id="btn-close-task-modal">&times;</button>
+            </div>
+            <form id="form-task">
+                <input type="hidden" id="task-id">
+                
+                <div class="form-group">
+                    <label for="task-title">ชื่องาน / สิ่งที่ต้องทำ <span class="required">*</span></label>
+                    <input type="text" id="task-title" placeholder="ระบุชื่องานที่ต้องการทำ..." required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="task-desc">รายละเอียดเพิ่มเติม</label>
+                    <textarea id="task-desc" rows="3" placeholder="เขียนรายละเอียด หรือขั้นตอนย่อยๆ..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-category" id="label-task-category">งาน/อาชีพย่อย</label>
+                        <select id="task-category">
+                            <!-- Injected dynamically -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-priority">ระดับความสำคัญ</label>
+                        <select id="task-priority">
+                            <option value="low">ต่ำ (Low)</option>
+                            <option value="medium" selected>ปานกลาง (Medium)</option>
+                            <option value="high">สูง (High)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-date">วันครบกำหนด (Due Date)</label>
+                    <input type="date" id="task-date">
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-text" id="btn-cancel-task">ยกเลิก</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-task">บันทึกงาน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Manage Categories / Occupations -->
+    <div class="modal-backdrop" id="modal-category">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="category-modal-title">จัดการอาชีพ / หมวดหมู่ย่อย</h3>
+                <button class="close-btn" id="btn-close-category-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="form-add-category" class="inline-form">
+                    <div class="form-group flex-1">
+                        <label for="category-name">ชื่ออาชีพ/หมวดหมู่ใหม่</label>
+                        <input type="text" id="category-name" placeholder="ระบุชื่อ (เช่น โปรแกรมเมอร์, งานฟรีแลนซ์, ท่องเที่ยว)..." required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="category-color">สีป้ายกำกับ</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="category-color" value="#3b82f6">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-icon-only" title="เพิ่ม">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </form>
+
+                <div class="category-list-container">
+                    <h4>หมวดหมู่ปัจจุบันของคุณ:</h4>
+                    <ul class="category-list" id="category-list-items">
+                        <!-- Injected dynamically -->
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer-info">
+                <i class="fa-solid fa-circle-info"></i> แต่ละโหมดชีวิตจะใช้รายชื่อหมวดหมู่แยกส่วนกัน เพื่อไม่ให้ปนกันครับ
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>
