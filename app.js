@@ -116,6 +116,58 @@ function saveLocalSettings() {
 }
 
 // --- FIREBASE AUTHENTICATION ---
+async function checkAndSeedCategories(uid) {
+    if (state.categoriesInitialized) return;
+    
+    try {
+        const qCat = query(collection(db, 'categories'), where('userId', '==', uid));
+        const snapshot = await getDocs(qCat);
+        
+        if (snapshot.empty) {
+            state.categoriesInitialized = true;
+            const batch = writeBatch(db);
+            DEFAULT_CATEGORIES.forEach(cat => {
+                const newId = 'cat-' + Date.now() + Math.random().toString(36).substr(2, 5);
+                batch.set(doc(db, 'categories', newId), {
+                    name: cat.name,
+                    color: cat.color,
+                    mode: cat.mode,
+                    userId: uid
+                });
+            });
+            await batch.commit();
+        } else {
+            state.categoriesInitialized = true;
+            
+            // Premium Cleanup: Find duplicate categories by Name & Mode and delete them
+            const uniqueCategories = {};
+            const duplicatesToDelete = [];
+            
+            snapshot.forEach(document => {
+                const cat = document.data();
+                const key = `${cat.name.trim()}_${cat.mode}`;
+                if (uniqueCategories[key]) {
+                    // Already saw this category name in this mode, mark for deletion
+                    duplicatesToDelete.push(document.ref);
+                } else {
+                    uniqueCategories[key] = true;
+                }
+            });
+            
+            if (duplicatesToDelete.length > 0) {
+                const batch = writeBatch(db);
+                duplicatesToDelete.forEach(ref => {
+                    batch.delete(ref);
+                });
+                await batch.commit();
+                console.log(`Cleaned up ${duplicatesToDelete.length} duplicate categories from database.`);
+            }
+        }
+    } catch (err) {
+        console.error("Error checking/seeding categories:", err);
+    }
+}
+
 function setupAuthListener() {
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -131,8 +183,10 @@ function setupAuthListener() {
             DOM.userName.textContent = user.displayName || 'User';
             DOM.userProfile.style.display = 'flex';
             
-            // Setup real-time listeners for Firestore
-            setupFirestoreListeners(user.uid);
+            // Seed categories if empty, then listen to updates
+            checkAndSeedCategories(user.uid).then(() => {
+                setupFirestoreListeners(user.uid);
+            });
         } else {
             state.currentUser = null;
             
@@ -183,27 +237,6 @@ function setupFirestoreListeners(uid) {
         snapshot.forEach(doc => {
             fetchedCategories.push({ id: doc.id, ...doc.data() });
         });
-        
-        // Seed Default Categories if empty
-        if (fetchedCategories.length === 0 && !state.categoriesInitialized) {
-            state.categoriesInitialized = true;
-            try {
-                const batch = writeBatch(db);
-                DEFAULT_CATEGORIES.forEach(cat => {
-                    const newId = 'cat-' + Date.now() + Math.random().toString(36).substr(2, 5);
-                    batch.set(doc(db, 'categories', newId), {
-                        name: cat.name,
-                        color: cat.color,
-                        mode: cat.mode,
-                        userId: uid
-                    });
-                });
-                await batch.commit();
-            } catch (err) {
-                console.error("Error seeding default categories: ", err);
-            }
-            return;
-        }
         
         state.categories = fetchedCategories;
         renderCategories();
