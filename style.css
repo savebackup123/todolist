@@ -1188,7 +1188,7 @@ body.dark-mode .mobile-tab-btn.active {
     }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 768px) {
     .app-container {
         padding: 1rem;
     }
@@ -1227,6 +1227,30 @@ body.dark-mode .mobile-tab-btn.active {
 
     .form-row {
         grid-template-columns: 1fr;
+    }
+
+    /* Grid for quick controls in mobile header to prevent button text wrap */
+    .controls-section {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .user-profile {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    #btn-theme-toggle {
+        width: 40px;
+        height: 40px;
+        justify-self: end;
+    }
+
+    #btn-add-task {
+        grid-column: 1 / -1;
+        width: 100%;
     }
 }
 
