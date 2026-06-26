@@ -476,7 +476,7 @@ body.dark-mode .icon-btn:hover {
     font-size: 0.8rem;
 }
 
-#filter-category, #task-category, #task-priority {
+#filter-category, #task-category, #task-priority, #sort-tasks {
     font-family: var(--font-body);
     font-size: 0.9rem;
     color: var(--text-primary);
@@ -492,8 +492,8 @@ body.dark-mode .icon-btn:hover {
     transition: all var(--transition-fast);
 }
 
-#filter-category:hover, #task-category:hover, #task-priority:hover,
-#filter-category:focus, #task-category:focus, #task-priority:focus {
+#filter-category:hover, #task-category:hover, #task-priority:hover, #sort-tasks:hover,
+#filter-category:focus, #task-category:focus, #task-priority:focus, #sort-tasks:focus {
     border-color: var(--theme-primary);
     background: rgba(255, 255, 255, 0.95);
 }
@@ -501,16 +501,19 @@ body.dark-mode .icon-btn:hover {
 body.dark-mode #filter-category:hover, 
 body.dark-mode #task-category:hover, 
 body.dark-mode #task-priority:hover,
+body.dark-mode #sort-tasks:hover,
 body.dark-mode #filter-category:focus, 
 body.dark-mode #task-category:focus, 
-body.dark-mode #task-priority:focus {
+body.dark-mode #task-priority:focus,
+body.dark-mode #sort-tasks:focus {
     background: var(--bg-dropdown-option);
 }
 
 /* Explicit style for option list to prevent white text on white bg / inheritance flickering */
 #filter-category option, 
 #task-category option, 
-#task-priority option {
+#task-priority option,
+#sort-tasks option {
     background-color: var(--bg-dropdown-option);
     color: var(--text-primary);
     padding: 0.5rem;
