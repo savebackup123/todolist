@@ -432,7 +432,6 @@ function renderTasks() {
     updateCounters();
     updateDashboardAlert();
 }
-}
 
 function createTaskCard(task) {
     const card = document.createElement('div');
