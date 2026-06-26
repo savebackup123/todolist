@@ -132,10 +132,23 @@
             </div>
         </section>
 
+        <!-- Mobile Column Tabs Navigation -->
+        <div class="mobile-board-tabs" id="mobile-board-tabs">
+            <button class="mobile-tab-btn active" data-target="col-todo">
+                <span class="column-dot dot-todo"></span> ต้องทำ (<span id="tab-count-todo">0</span>)
+            </button>
+            <button class="mobile-tab-btn" data-target="col-progress">
+                <span class="column-dot dot-progress"></span> กำลังทำ (<span id="tab-count-progress">0</span>)
+            </button>
+            <button class="mobile-tab-btn" data-target="col-done">
+                <span class="column-dot dot-done"></span> เสร็จแล้ว (<span id="tab-count-done">0</span>)
+            </button>
+        </div>
+
         <!-- Kanban Board Area -->
         <main class="kanban-board">
             <!-- Column: TO DO -->
-            <div class="kanban-column" id="col-todo" data-status="todo">
+            <div class="kanban-column active-tab" id="col-todo" data-status="todo">
                 <div class="column-header">
                     <div class="column-title-wrapper">
                         <span class="column-dot dot-todo"></span>
@@ -215,9 +228,19 @@
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="task-date">วันครบกำหนด (Due Date)</label>
-                    <input type="date" id="task-date">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-status">สถานะงาน</label>
+                        <select id="task-status">
+                            <option value="todo">ต้องทำ (To Do)</option>
+                            <option value="progress">กำลังทำ (In Progress)</option>
+                            <option value="done">เสร็จแล้ว (Done)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-date">วันครบกำหนด (Due Date)</label>
+                        <input type="date" id="task-date">
+                    </div>
                 </div>
 
                 <div class="modal-actions">

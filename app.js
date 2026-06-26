@@ -79,6 +79,7 @@ const DOM = {
     taskCategorySelect: document.getElementById('task-category'),
     taskPrioritySelect: document.getElementById('task-priority'),
     taskDateInput: document.getElementById('task-date'),
+    taskStatusSelect: document.getElementById('task-status'),
     btnCancelTask: document.getElementById('btn-cancel-task'),
     btnCloseTaskModal: document.getElementById('btn-close-task-modal'),
     taskModalTitle: document.getElementById('task-modal-title'),
@@ -494,6 +495,11 @@ function updateCounters() {
             count = count.filter(task => task.categoryId === state.currentFilter);
         }
         DOM.counters[status].textContent = count.length;
+        
+        const mobileCounter = document.getElementById(`tab-count-${status}`);
+        if (mobileCounter) {
+            mobileCounter.textContent = count.length;
+        }
     });
 }
 
@@ -644,6 +650,9 @@ window.openAddTaskModal = function() {
     DOM.taskModalTitle.textContent = 'สร้างงานค้างคาใหม่';
     
     renderCategories();
+    if (DOM.taskStatusSelect) {
+        DOM.taskStatusSelect.value = 'todo';
+    }
     DOM.modalTask.classList.add('open');
 };
 
@@ -659,6 +668,9 @@ window.openEditTaskModal = function(id) {
     DOM.taskCategorySelect.value = task.categoryId || '';
     DOM.taskPrioritySelect.value = task.priority;
     DOM.taskDateInput.value = task.date || '';
+    if (DOM.taskStatusSelect) {
+        DOM.taskStatusSelect.value = task.status || 'todo';
+    }
     
     DOM.taskModalTitle.textContent = 'แก้ไขรายละเอียดงาน';
     DOM.modalTask.classList.add('open');
@@ -678,6 +690,7 @@ async function handleTaskFormSubmit(e) {
     const categoryId = DOM.taskCategorySelect.value;
     const priority = DOM.taskPrioritySelect.value;
     const date = DOM.taskDateInput.value;
+    const status = DOM.taskStatusSelect ? DOM.taskStatusSelect.value : 'todo';
     
     if (!title) return;
     
@@ -690,7 +703,8 @@ async function handleTaskFormSubmit(e) {
                 desc,
                 categoryId,
                 priority,
-                date
+                date,
+                status
             });
         } else {
             // Create Mode: Add Firestore Doc
@@ -703,7 +717,7 @@ async function handleTaskFormSubmit(e) {
                 categoryId,
                 priority,
                 date,
-                status: 'todo',
+                status,
                 mode: state.currentMode,
                 userId: state.currentUser.uid,
                 order: orderIndex
@@ -833,6 +847,30 @@ function setupEventListeners() {
         state.sortMode = e.target.value;
         saveLocalSettings();
         renderTasks();
+    });
+    
+    // Mobile tab buttons click triggers
+    const mobileTabs = document.querySelectorAll('.mobile-tab-btn');
+    mobileTabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Remove active class from all tabs
+            mobileTabs.forEach(t => t.classList.remove('active'));
+            // Add active class to clicked tab
+            btn.classList.add('active');
+            
+            // Get target column ID
+            const targetColId = btn.dataset.target;
+            
+            // Toggle active-tab class on all columns
+            const columns = document.querySelectorAll('.kanban-column');
+            columns.forEach(col => {
+                if (col.id === targetColId) {
+                    col.classList.add('active-tab');
+                } else {
+                    col.classList.remove('active-tab');
+                }
+            });
+        });
     });
     
     // Dashboard Alert banner close button

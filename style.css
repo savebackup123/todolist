@@ -476,7 +476,7 @@ body.dark-mode .icon-btn:hover {
     font-size: 0.8rem;
 }
 
-#filter-category, #task-category, #task-priority, #sort-tasks {
+#filter-category, #task-category, #task-priority, #sort-tasks, #task-status {
     font-family: var(--font-body);
     font-size: 0.9rem;
     color: var(--text-primary);
@@ -492,8 +492,8 @@ body.dark-mode .icon-btn:hover {
     transition: all var(--transition-fast);
 }
 
-#filter-category:hover, #task-category:hover, #task-priority:hover, #sort-tasks:hover,
-#filter-category:focus, #task-category:focus, #task-priority:focus, #sort-tasks:focus {
+#filter-category:hover, #task-category:hover, #task-priority:hover, #sort-tasks:hover, #task-status:hover,
+#filter-category:focus, #task-category:focus, #task-priority:focus, #sort-tasks:focus, #task-status:focus {
     border-color: var(--theme-primary);
     background: rgba(255, 255, 255, 0.95);
 }
@@ -502,10 +502,12 @@ body.dark-mode #filter-category:hover,
 body.dark-mode #task-category:hover, 
 body.dark-mode #task-priority:hover,
 body.dark-mode #sort-tasks:hover,
+body.dark-mode #task-status:hover,
 body.dark-mode #filter-category:focus, 
 body.dark-mode #task-category:focus, 
 body.dark-mode #task-priority:focus,
-body.dark-mode #sort-tasks:focus {
+body.dark-mode #sort-tasks:focus,
+body.dark-mode #task-status:focus {
     background: var(--bg-dropdown-option);
 }
 
@@ -513,7 +515,8 @@ body.dark-mode #sort-tasks:focus {
 #filter-category option, 
 #task-category option, 
 #task-priority option,
-#sort-tasks option {
+#sort-tasks option,
+#task-status option {
     background-color: var(--bg-dropdown-option);
     color: var(--text-primary);
     padding: 0.5rem;
@@ -868,6 +871,9 @@ body.dark-mode .task-date-badge.normal {
     border-radius: var(--border-radius-lg);
     width: 90%;
     max-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
     transform: translateY(20px) scale(0.95);
@@ -885,6 +891,7 @@ body.dark-mode .task-date-badge.normal {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -909,6 +916,19 @@ body.dark-mode .task-date-badge.normal {
 
 .modal-card form, .modal-body {
     padding: 1.5rem;
+    overflow-y: auto;
+    flex-grow: 1;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color-muted) transparent;
+}
+
+.modal-card form::-webkit-scrollbar, .modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-card form::-webkit-scrollbar-thumb, .modal-body::-webkit-scrollbar-thumb {
+    background: var(--border-color-muted);
+    border-radius: 10px;
 }
 
 /* Forms styling */
@@ -1069,15 +1089,69 @@ body.dark-mode .modal-footer-info {
     background: rgba(255, 255, 255, 0.02);
 }
 
+/* Mobile Kanban Board Tabs */
+.mobile-board-tabs {
+    display: none; /* Hidden on desktop */
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--border-radius-md);
+    padding: 4px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color-muted);
+    gap: 4px;
+}
+
+body.dark-mode .mobile-board-tabs {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-tab-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.65rem 0.25rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: all var(--transition-fast);
+}
+
+.mobile-tab-btn.active {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--border-color);
+}
+
+body.dark-mode .mobile-tab-btn.active {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
 /* --- RESPONSIVE DESIGN --- */
 @media (max-width: 992px) {
+    .mobile-board-tabs {
+        display: flex;
+    }
+    
     .kanban-board {
         grid-template-columns: 1fr;
-        gap: 2rem;
+        gap: 1.5rem;
     }
     
     .kanban-column {
-        max-height: 500px;
+        display: none; /* Hide columns by default on mobile, let tab switcher show active one */
+        max-height: calc(100vh - 280px);
+        min-height: 380px;
+    }
+    
+    .kanban-column.active-tab {
+        display: flex; /* Show only active column */
     }
 
     .app-header {
@@ -1103,6 +1177,14 @@ body.dark-mode .modal-footer-info {
 
     .controls-section {
         justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    
+    /* Make Add Task button span full width on smaller headers */
+    #btn-add-task {
+        flex-grow: 1;
+        justify-content: center;
     }
 }
 
@@ -1114,18 +1196,28 @@ body.dark-mode .modal-footer-info {
     .sub-header {
         flex-direction: column;
         align-items: stretch;
+        gap: 1rem;
     }
 
     .filter-group {
-        justify-content: space-between;
+        flex-direction: column;
+        align-items: stretch;
+        width: 100%;
+        gap: 0.75rem;
+    }
+    
+    .filter-group label {
+        margin-left: 0 !important;
+        margin-bottom: 0.1rem;
     }
 
     .select-wrapper {
-        flex-grow: 1;
+        width: 100%;
     }
 
-    #filter-category {
+    #filter-category, #sort-tasks {
         width: 100%;
+        min-width: 100%;
     }
 
     .btn {
