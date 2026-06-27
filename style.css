@@ -144,6 +144,23 @@ body.dark-mode.theme-personal {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+/* Custom focus ring for keyboard accessibility */
+button:focus-visible, 
+select:focus-visible, 
+input:focus-visible, 
+textarea:focus-visible,
+a:focus-visible {
+    outline: 2px dashed var(--theme-primary);
+    outline-offset: 2px;
+}
+
+/* Prevent default outline on click but allow it for screen readers */
+button:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+input:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
     outline: none;
 }
 
@@ -1507,4 +1524,26 @@ body.dark-mode .user-profile {
 
 .alert-close-btn:hover {
     color: var(--color-danger);
+}
+
+/* Active tactile scale feedback for buttons and interactive items */
+.btn:active, 
+.icon-btn:active, 
+.card-action-btn:active,
+.mobile-tab-btn:active,
+.mode-btn:active {
+    transform: scale(0.95) !important;
+}
+
+/* Reduced motion preference support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-delay: -1ms !important;
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        background-attachment: initial !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0s !important;
+        transition-delay: 0s !important;
+    }
 }

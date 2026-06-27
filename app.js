@@ -352,7 +352,7 @@ function renderCategories() {
                         <span class="category-color-dot" style="background-color: ${cat.color}"></span>
                         <span>${cat.name}</span>
                     </div>
-                    <button class="card-action-btn btn-delete" onclick="deleteCategory('${cat.id}')" title="ลบหมวดหมู่">
+                    <button class="card-action-btn btn-delete" onclick="deleteCategory('${cat.id}')" title="ลบหมวดหมู่" aria-label="ลบหมวดหมู่">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </li>
@@ -465,10 +465,10 @@ function createTaskCard(task) {
         <div class="task-card-header">
             <h4 class="task-title">${escapeHtml(task.title)}</h4>
             <div class="task-actions">
-                <button class="card-action-btn btn-edit" onclick="openEditTaskModal('${task.id}')" title="แก้ไขงาน">
+                <button class="card-action-btn btn-edit" onclick="openEditTaskModal('${task.id}')" title="แก้ไขงาน" aria-label="แก้ไขงาน">
                     <i class="fa-solid fa-pen-to-square"></i>
                 </button>
-                <button class="card-action-btn btn-delete" onclick="deleteTask('${task.id}')" title="ลบงาน">
+                <button class="card-action-btn btn-delete" onclick="deleteTask('${task.id}')" title="ลบงาน" aria-label="ลบงาน">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
@@ -694,6 +694,12 @@ async function handleTaskFormSubmit(e) {
     
     if (!title) return;
     
+    // UI/UX Pro Max: Prevent double clicks and show loading feedback
+    const submitBtn = DOM.formTask.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+    
     try {
         if (id) {
             // Edit Mode: Update Firestore Doc
@@ -727,11 +733,21 @@ async function handleTaskFormSubmit(e) {
     } catch (error) {
         console.error("Error saving task to Firestore:", error);
         alert("ไม่สามารถบันทึกงานได้ในขณะนี้");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 }
 
 window.deleteTask = async function(id) {
     if (!state.currentUser) return;
+    
+    // UI/UX Pro Max: Confirm before delete
+    const task = state.tasks.find(t => t.id === id);
+    const taskTitle = task ? task.title : 'งานนี้';
+    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบงาน "${taskTitle}"?`)) {
+        return;
+    }
     
     const card = document.querySelector(`.task-card[data-id="${id}"]`);
     if (card) {
@@ -771,6 +787,12 @@ async function handleAddCategorySubmit(e) {
     
     if (!name) return;
     
+    // UI/UX Pro Max: Prevent double clicks and show loading feedback
+    const submitBtn = DOM.formAddCategory.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+    
     try {
         const newId = 'cat-' + Date.now() + Math.random().toString(36).substr(2, 5);
         await setDoc(doc(db, 'categories', newId), {
@@ -785,11 +807,21 @@ async function handleAddCategorySubmit(e) {
     } catch (error) {
         console.error("Error adding category to Firestore:", error);
         alert("ไม่สามารถเพิ่มหมวดหมู่ได้ในขณะนี้");
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
     }
 }
 
 window.deleteCategory = async function(id) {
     if (!state.currentUser) return;
+    
+    // UI/UX Pro Max: Confirm before delete category
+    const category = state.categories.find(c => c.id === id);
+    const catName = category ? category.name : 'หมวดหมู่นี้';
+    if (!confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่ "${catName}"?\n(งานที่ใช้หมวดหมู่นี้อยู่จะไม่ถูกลบ แต่จะถูกเปลี่ยนเป็นแบบไม่มีหมวดหมู่แทน)`)) {
+        return;
+    }
     
     try {
         const batch = writeBatch(db);
@@ -880,6 +912,14 @@ function setupEventListeners() {
     window.addEventListener('click', (e) => {
         if (e.target === DOM.modalTask) closeTaskModal();
         if (e.target === DOM.modalCategory) closeCategoryModal();
+    });
+    
+    // Close modals on pressing Escape key
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeTaskModal();
+            closeCategoryModal();
+        }
     });
     
     setupDragContainers();

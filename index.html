@@ -11,7 +11,7 @@
     <!-- FontAwesome for Premium Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- CSS Style -->
-    <link rel="stylesheet" href="style.css?v=1.0.3">
+    <link rel="stylesheet" href="style.css?v=1.0.4">
 </head>
 <body class="theme-work">
     <!-- Decorative Ambient Blobs -->
@@ -74,13 +74,13 @@
                 <div class="user-profile" id="user-profile" style="display: none;">
                     <img src="" alt="Avatar" id="user-avatar" class="user-avatar">
                     <span id="user-name" class="user-name"></span>
-                    <button class="icon-btn" id="btn-logout" title="ออกจากระบบ">
+                    <button class="icon-btn" id="btn-logout" title="ออกจากระบบ" aria-label="ออกจากระบบ">
                         <i class="fa-solid fa-right-from-bracket"></i>
                     </button>
                 </div>
                 
                 <!-- Theme Mode (Light/Dark) -->
-                <button class="icon-btn" id="btn-theme-toggle" title="สลับโหมด มืด/สว่าง">
+                <button class="icon-btn" id="btn-theme-toggle" title="สลับโหมด มืด/สว่าง" aria-label="สลับโหมด มืด/สว่าง">
                     <i class="fa-solid fa-moon"></i>
                 </button>
                 <!-- Add Task Button -->
@@ -98,7 +98,7 @@
             <div class="alert-content">
                 <p id="dashboard-alert-text">สวัสดีครับ ยินดีต้อนรับสู่ LifeFlow!</p>
             </div>
-            <button class="alert-close-btn" id="btn-close-alert" title="ปิดการแจ้งเตือน">&times;</button>
+            <button class="alert-close-btn" id="btn-close-alert" title="ปิดการแจ้งเตือน" aria-label="ปิดการแจ้งเตือน">&times;</button>
         </div>
 
         <!-- Sub-navigation & Filtering -->
@@ -196,7 +196,7 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3 id="task-modal-title">สร้างงานค้างคาใหม่</h3>
-                <button class="close-btn" id="btn-close-task-modal">&times;</button>
+                <button class="close-btn" id="btn-close-task-modal" aria-label="ปิดหน้าต่าง">&times;</button>
             </div>
             <form id="form-task">
                 <input type="hidden" id="task-id">
@@ -256,7 +256,7 @@
         <div class="modal-card">
             <div class="modal-header">
                 <h3 id="category-modal-title">จัดการอาชีพ / หมวดหมู่ย่อย</h3>
-                <button class="close-btn" id="btn-close-category-modal">&times;</button>
+                <button class="close-btn" id="btn-close-category-modal" aria-label="ปิดหน้าต่าง">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="form-add-category" class="inline-form">
@@ -289,6 +289,6 @@
     </div>
 
     <!-- Application Logic -->
-    <script type="module" src="app.js?v=1.0.3"></script>
+    <script type="module" src="app.js?v=1.0.4"></script>
 </body>
 </html>
